@@ -1,8 +1,11 @@
 class Boid {
     constructor(s) {
-        this.position = s.createVector(s.width * Math.random(), s.height * Math.random());
+        this.position = s.createVector(
+            s.width * Math.random(),
+            s.height * Math.random()
+        );
         this.velocity = p5.Vector.random2D();
-        this.velocity.setMag((Math.random() + 0.5) * 5)
+        this.velocity.setMag((Math.random() + 0.5) * 5);
         this.acceleration = s.createVector();
         this.maxForce = 0.2;
         this.maxSpeed = 4;
@@ -27,7 +30,12 @@ class Boid {
         let steering = s.createVector();
         let total = 0;
         for (let neighbor of boids) {
-            let d = s.dist(this.position.x, this.position.y, neighbor.position.x, neighbor.position.y)
+            let d = s.dist(
+                this.position.x,
+                this.position.y,
+                neighbor.position.x,
+                neighbor.position.y
+            );
             if (neighbor !== this && d < perceptionRadius) {
                 steering.add(neighbor.velocity);
                 total++;
@@ -48,7 +56,12 @@ class Boid {
         let steering = s.createVector();
         let total = 0;
         for (let neighbor of boids) {
-            let d = s.dist(this.position.x, this.position.y, neighbor.position.x, neighbor.position.y)
+            let d = s.dist(
+                this.position.x,
+                this.position.y,
+                neighbor.position.x,
+                neighbor.position.y
+            );
             if (neighbor !== this && d < perceptionRadius) {
                 steering.add(neighbor.position);
                 total++;
@@ -70,7 +83,12 @@ class Boid {
         let steering = s.createVector();
         let total = 0;
         for (let neighbor of boids) {
-            let d = s.dist(this.position.x, this.position.y, neighbor.position.x, neighbor.position.y)
+            let d = s.dist(
+                this.position.x,
+                this.position.y,
+                neighbor.position.x,
+                neighbor.position.y
+            );
             if (neighbor !== this && d < perceptionRadius) {
                 let diff = p5.Vector.sub(this.position, neighbor.position);
                 diff.div(d);
@@ -102,6 +120,15 @@ class Boid {
     }
 
     update(s) {
+        if (s.dist(this.position.x, this.position.y, 600, 400) < 200) {
+            if (this.velocity.x > this.velocity.y) {
+                var vel = s.createVector(0, this.velocity.y)
+            } else {
+                var vel = s.createVector(this.velocity.y, 0)
+            }
+        } else {
+            var vel = this.velocity
+        }
         this.position.add(this.velocity);
         this.velocity.add(this.acceleration);
         this.velocity.limit(this.maxSpeed);
@@ -112,4 +139,9 @@ class Boid {
         s.stroke(255);
         s.point(this.position.x, this.position.y);
     }
+
+    toStr() {
+        return JSON.stringify({"position": this.position, veldocity: this.velocity})
+    }
+
 }
