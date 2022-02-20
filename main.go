@@ -7,90 +7,18 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
+	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"strconv"
-	"time"
-
-	"github.com/gorilla/websocket"
+	"tjweldon/archetypal-agents/agents"
 )
 
 var addr = flag.String("addr", "localhost:8080", "http service address")
 
 var upgrader = websocket.Upgrader{} // use default options
-
-// LPFloat serialises as a number represented to a fixed number
-// decimal places eg. 1.00
-type LPFloat struct {
-	Value  float64 // the actual value
-	Digits int     // the number of digits used in json
-}
-
-// MarshalJSON serialises the LPFloat Type
-func (l LPFloat) MarshalJSON() ([]byte, error) {
-	s := fmt.Sprintf("%.*f", l.Digits, l.Value)
-	return []byte(s), nil
-}
-
-type Coords struct {
-	X LPFloat `json:"x"`
-	Y LPFloat `json:"y"`
-}
-
-type Frame []Coords
-
-func tick(w http.ResponseWriter, r *http.Request) {
-	// Upgrade the web request to a socket
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-
-	// Socket close on function return
-	defer conn.Close()
-
-	// Initiate Clock
-	ticker := time.NewTicker(time.Second / 70)
-	defer ticker.Stop()
-
-	// Signal to kill the socket
-	done := make(chan bool)
-	go func() {
-		time.Sleep(10 * time.Second)
-		done <- true
-	}()
-
-	// Stream loop
-	for {
-		select {
-		case <-done:
-			// Send a farewell
-			err = conn.WriteMessage(websocket.TextMessage, []byte("Done!"))
-			return
-		case t := <-ticker.C:
-			// Calculate coordinates
-			timeFloat := float64(t.UnixMilli()%1000) / 1e3
-			coords := Coords{
-				X: LPFloat{Value: 100*math.Cos(2*math.Pi*timeFloat) + 200, Digits: 2},
-				Y: LPFloat{Value: 100*math.Sin(2*math.Pi*timeFloat) + 200, Digits: 2},
-			}
-
-			// JSON serialise
-			rawJson, err := json.Marshal(coords)
-			if err != nil {
-				panic(err)
-			}
-
-			// SEND IT LADS, YEET
-			err = conn.WriteMessage(websocket.TextMessage, rawJson)
-		}
-	}
-}
 
 // streamFrames handles the websocket that will stream the animation frames.
 // It sets up:
@@ -114,7 +42,7 @@ func streamFrames(w http.ResponseWriter, r *http.Request) {
 	}(conn)
 
 	// Channel setup
-	frameStream := make(chan []Frame)
+	frameStream := make(chan []agents.Frame)
 	frameRequest := make(chan int)
 
 	// Frame data calculation goroutine
@@ -146,7 +74,7 @@ func streamFrames(w http.ResponseWriter, r *http.Request) {
 // of frames. On receiving such a message it will calculate the next
 // sequence of frames until it has the number requested. They are then
 // sent into the frameStream channel.
-func frameGenerator(frameStream chan []Frame, frameRequest chan int) {
+func frameGenerator(frameStream chan []agents.Frame, frameRequest chan int) {
 	defer close(frameStream)
 	frameCount := 0
 	for seqLen := range frameRequest {
@@ -154,17 +82,10 @@ func frameGenerator(frameStream chan []Frame, frameRequest chan int) {
 		case -1:
 			return
 		default:
-			var frames []Frame
+			var frames []agents.Frame
 			for i := frameCount; i < frameCount+seqLen; i++ {
-				timeFloat := float64(i) / 60
-				frames = append(frames,
-					Frame{
-						Coords{
-							X: LPFloat{Value: 100*math.Cos(2*math.Pi*timeFloat) + 200, Digits: 2},
-							Y: LPFloat{Value: 100*math.Sin(2*math.Pi*timeFloat) + 200, Digits: 2},
-						},
-					},
-				)
+				seconds := float64(i) / 60
+				frames = append(frames, agents.GetFrameAt(seconds))
 			}
 			frameStream <- frames
 		}

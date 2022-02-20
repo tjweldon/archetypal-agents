@@ -10,10 +10,9 @@
 
             // Debug output
             const print = function(message) {
-                let d = document.createElement("div");
-                d.textContent = message;
+                // let d = document.createElement("div");
+                // d.textContent = message;
                 output.innerHTML = message;
-                output.scroll(0, output.scrollHeight);
             };
 
             // On clicking the 'Open' button:
@@ -32,7 +31,7 @@
                 }
                 ws.onmessage = function(evt) {
                     print(evt.data);
-                    console.log(evt.data)
+                    // console.log(evt.data)
                     frameBuffer.push(...JSON.parse(evt.data))
                 }
                 ws.onerror = function(evt) {
