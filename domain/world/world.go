@@ -1,25 +1,35 @@
-package agents
+package world
 
-import (
-	"fmt"
-	"math"
-	"time"
-)
+import "math"
 
-var (
-	width  float64 = 800
-	height float64 = 400
-)
-
+// Sum is the generalisation of + on real numbers. An implementation should have the following characteristics:
+//  - Sum(a, b) == Sum(b, a)
+//  - Sum(Sum(a, b), c) == Sum(a, Sum(b, c))
+//  - Sum(0, a) == a
+//  - Sum(-a, a) == 0
 type Sum func(scalars ...float64) float64
 
-type Diff func(scalarA, scalarB float64) float64
+// Metric is the generalisation of the absolute distance between two points in a connected 1d space. Any implementation
+// should have the following properties:
+//  - Metric(a, b) == Metric(b, a)
+//  - Metric(a, b) >= 0
+//  - Metric(a, a) == 0
+//  - Metric(a, b) + Metric(b, c) >= Metric(a, c)
+type Metric func(scalarA, scalarB float64) float64
+
+// Invert is the generalisation of changing the sign of a value, i.e. finding the inverse under addition.
+// An implementation should have the following properties:
+//  - Sum(Invert(a), a) == 0
+//  - Invert(0) == 0
+//  - Invert(Invert(a)) == a
+type Invert func(scalar float64) float64
 
 // MetricSpace1D is a representation of the way distance is calculated in a given coordinate.
 // It contains no state, it is an attribute of the environment in which the simulation takes place.
 type MetricSpace1D struct {
 	Sum    Sum
-	Metric Diff
+	Metric Metric
+	Invert Invert
 }
 
 // Line returns a MetricSpace1D that behaves like the usual real numbers unbounded above and below
@@ -35,6 +45,9 @@ func Line() MetricSpace1D {
 		Metric: func(scalarA, scalarB float64) float64 {
 			return math.Abs(scalarA - scalarB)
 		},
+		Invert: func(scalar float64) float64 {
+			return -scalar
+		},
 	}
 }
 
@@ -46,11 +59,14 @@ func Circles(circumference float64) MetricSpace1D {
 			return math.Remainder(line.Sum(scalars...), circumference)
 		},
 		Metric: func(scalarA, scalarB float64) float64 {
-			result := line.Metric(scalarA, scalarB)
+			result := math.Remainder(line.Metric(scalarA, scalarB), circumference)
 			if result > circumference/2 {
-				result = math.Abs(circumference - result)
+				result = circumference/2 - result
 			}
-			return result
+			return math.Abs(result)
+		},
+		Invert: func(scalar float64) float64 {
+			return circumference - math.Remainder(scalar, circumference)
 		},
 	}
 }
@@ -63,8 +79,8 @@ type MetricSpace2D struct {
 // GeodesicDiff returns a tuple of geodesic distances between two points (x1, y1) and (x2, y2).
 // This defaults to the shortest straight path between the points. This is useful in toroidal topologies.
 func (m MetricSpace2D) GeodesicDiff(x1, x2, y1, y2 float64) (deltaX, deltaY float64) {
-	deltaX = m.XCoord.Metric(x1, x2)
-	deltaY = m.YCoord.Metric(y1, y2)
+	deltaX = m.XCoord.Sum(m.XCoord.Invert(x1), x2)
+	deltaY = m.YCoord.Metric(m.YCoord.Invert(y1), y2)
 	return deltaX, deltaY
 }
 
@@ -93,9 +109,14 @@ func NewEuclideanToroid(w, h float64) *MetricSpace2D {
 	}
 }
 
-// NewVector is a method used to initialise a Vector in the metric space m
-func (m *MetricSpace2D) NewVector() *Vector {
+// ZeroVector is a method used to initialise a Vector in the metric space with zero magnitude
+func (m *MetricSpace2D) ZeroVector() *Vector {
 	return &Vector{metricSpace: m}
+}
+
+// NewVector is a method used to initialise a Vector
+func (m *MetricSpace2D) NewVector(x, y float64) *Vector {
+	return &Vector{metricSpace: m, X: x, Y: y}
 }
 
 // Vector represents a point in a space and can be summed in a way that respects linearity. This is a mutable implementation because
@@ -120,93 +141,4 @@ func (v *Vector) Accumulate(vectors ...*Vector) *Vector {
 func (v *Vector) Minus(vector *Vector) Vector {
 	deltaX, deltaY := v.metricSpace.GeodesicDiff(v.X, vector.X, v.Y, vector.Y)
 	return Vector{X: deltaX, Y: deltaY}
-}
-
-type Agent struct {
-	Position, Velocity *Vector
-}
-
-func NewAgent(positions, velocities *MetricSpace2D) *Agent {
-	return &Agent{positions.NewVector(), velocities.NewVector()}
-}
-
-// State represents a static snapshot of the simulation at a given time
-type State struct {
-	CoordinateSystem *MetricSpace2D
-	Agents           []*Agent
-}
-
-func NewState(positions, velocities *MetricSpace2D) *State {
-	agents := make([]*Agent, 100)
-	for index, _ := range agents {
-		agents[index] = NewAgent(positions, velocities)
-	}
-	return &State{Agents: agents, CoordinateSystem: positions}
-}
-
-// Distances calculates an array where the value at distances[i][j] is the distance from State.Agents[i] to State.Agents[j]. This has the property that
-// distances[i][j] == distances[j][i] and distances[i][i] == 0
-func (s State) Distances() (distances [][]float64) {
-	distances = make([][]float64, s.Population())
-	for index, _ := range distances {
-		distances[index] = make([]float64, s.Population())
-	}
-
-	for i := 0; i < len(distances); i++ {
-		for j := 0; j < i; j++ {
-			distances[i][j] = s.CoordinateSystem.Metric(s.Agents[i].Position, s.Agents[j].Position)
-			distances[j][i] = distances[i][j]
-		}
-	}
-
-	return distances
-}
-
-// Population returns the number of agents
-func (s State) Population() int {
-	population := len(s.Agents)
-	return population
-}
-
-// Scenario is a complete encapsulation of the simulation. It contains the current time, state, topology and simulation timeStep
-type Scenario struct {
-	Time, DeltaT          time.Duration
-	positions, velocities *MetricSpace2D
-	state                 *State
-}
-
-func InitialiseScenario(timeStep time.Duration) Scenario {
-	toroid, euclideanPlane := NewEuclideanToroid(width, height), NewEuclideanPlane()
-	state := NewState(toroid, euclideanPlane)
-	return Scenario{positions: toroid, velocities: euclideanPlane, state: state, DeltaT: timeStep}
-}
-
-// LPFloat serialises as a number represented to a fixed number
-// decimal places eg. 1.00
-type LPFloat struct {
-	Value  float64 // the actual value
-	Digits int     // the number of digits used in json
-}
-
-// MarshalJSON serialises the LPFloat Type
-func (l LPFloat) MarshalJSON() ([]byte, error) {
-	s := fmt.Sprintf("%.*f", l.Digits, l.Value)
-	return []byte(s), nil
-}
-
-type Coords struct {
-	X LPFloat `json:"x"`
-	Y LPFloat `json:"y"`
-}
-
-type Frame []Coords
-
-// GetFrameAt Retrieves the frame data at time t (in seconds)
-func GetFrameAt(t float64) Frame {
-	return Frame{}
-}
-
-// GetNextFrame is a generator function for Frame instances
-func (s Scenario) GetNextFrame() (frame Frame) {
-	return Frame{}
 }

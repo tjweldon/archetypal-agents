@@ -14,7 +14,7 @@ import (
 	"os"
 	"strconv"
 	"time"
-	"tjweldon/archetypal-agents/agents"
+	"tjweldon/archetypal-agents/domain/agents"
 )
 
 var addr = flag.String("addr", "localhost:8080", "http service address")
