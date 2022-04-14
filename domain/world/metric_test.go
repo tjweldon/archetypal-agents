@@ -10,7 +10,7 @@ import (
 
 var random = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-const AcceptibleError = 1.0e-9
+const MaxPrecision = 1.0e-9
 
 func randFloat(a, b float64) float64 {
 	lower := math.Min(a, b)
@@ -62,7 +62,7 @@ func TestLine(t *testing.T) {
 		assert.GreaterOrEqual(t, metricsMustSatisfy.Positivity(m, t), 0.0, "Positivity")
 		assert.Equal(t, 0.0, metricsMustSatisfy.Symmetry(m, t), "Symmetry")
 		assert.Equal(t, 0.0, metricsMustSatisfy.Minimum(m, t), "Minimum")
-		assert.GreaterOrEqual(t, metricsMustSatisfy.TriangleInequality(m, t), -AcceptibleError, "TriangleInequality")
+		assert.GreaterOrEqual(t, metricsMustSatisfy.TriangleInequality(m, t), -MaxPrecision, "TriangleInequality")
 	}
 
 }
@@ -75,7 +75,7 @@ func TestCircleSmall(t *testing.T) {
 		assert.GreaterOrEqual(t, metricsMustSatisfy.Positivity(m, t), 0.0, "Positivity")
 		assert.Equal(t, 0.0, metricsMustSatisfy.Symmetry(m, t), "Symmetry")
 		assert.Equal(t, 0.0, metricsMustSatisfy.Minimum(m, t), "Minimum")
-		assert.GreaterOrEqual(t, metricsMustSatisfy.TriangleInequality(m, t), -AcceptibleError, "TriangleInequality")
+		assert.GreaterOrEqual(t, metricsMustSatisfy.TriangleInequality(m, t), -MaxPrecision, "TriangleInequality")
 	}
 }
 
@@ -87,6 +87,6 @@ func TestCircleBig(t *testing.T) {
 		assert.GreaterOrEqual(t, metricsMustSatisfy.Positivity(m, t), 0.0, "Positivity")
 		assert.Equal(t, 0.0, metricsMustSatisfy.Symmetry(m, t), "Symmetry")
 		assert.Equal(t, 0.0, metricsMustSatisfy.Minimum(m, t), "Minimum")
-		assert.GreaterOrEqual(t, metricsMustSatisfy.TriangleInequality(m, t), -AcceptibleError, "TriangleInequality")
+		assert.GreaterOrEqual(t, metricsMustSatisfy.TriangleInequality(m, t), -MaxPrecision, "TriangleInequality")
 	}
 }
