@@ -56,7 +56,7 @@ var metricsMustSatisfy = metricDefinitionChecks{
 
 func TestLine(t *testing.T) {
 	assert.New(t)
-	m := Line().Metric
+	m := RealLine().Metric
 
 	for i := 0; i < 100; i++ {
 		assert.GreaterOrEqual(t, metricsMustSatisfy.Positivity(m, t), 0.0, "Positivity")

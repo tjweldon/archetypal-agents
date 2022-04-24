@@ -16,17 +16,16 @@ func TestDistanceBetweenEndsIsSmall(t *testing.T) {
 	circle := Circles(1.0)
 	oneDegree := 1.0 / MaxDegrees
 	minusOneDegree := (MaxDegrees - 1.0) / MaxDegrees
-	minDelta := 10e-9
 
 	geodesic := circle.Metric(oneDegree, minusOneDegree)
 
-	if math.Abs(geodesic-2*oneDegree) > minDelta {
+	if math.Abs(geodesic-2*oneDegree) > MaxPrecision {
 		t.Fatalf("The distance between +1 degree and -1 degree was off by %e in %e", geodesic-2*oneDegree, geodesic)
 	}
 }
 
 func TestMaximumDistanceIsHalfCircumference(t *testing.T) {
-	cirumference := math.SqrtE
+	cirumference := 100.0
 	circle := Circles(cirumference)
 
 	dists := func(n int) float64 {
