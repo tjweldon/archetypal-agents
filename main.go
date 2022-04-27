@@ -13,7 +13,8 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"tjweldon/archetypal-agents/agents"
+	"time"
+	"tjweldon/archetypal-agents/domain/agents"
 )
 
 var addr = flag.String("addr", "localhost:8080", "http service address")
@@ -77,15 +78,15 @@ func streamFrames(w http.ResponseWriter, r *http.Request) {
 func frameGenerator(frameStream chan []agents.Frame, frameRequest chan int) {
 	defer close(frameStream)
 	frameCount := 0
+	simulation := agents.InitialiseScenario(time.Second / 60)
 	for seqLen := range frameRequest {
 		switch seqLen {
 		case -1:
 			return
 		default:
-			var frames []agents.Frame
-			for i := frameCount; i < frameCount+seqLen; i++ {
-				seconds := float64(i) / 60
-				frames = append(frames, agents.GetFrameAt(seconds))
+			frames := make([]agents.Frame, seqLen)
+			for i := 0; i < frameCount; i++ {
+				frames[i] = simulation.GetNextFrame()
 			}
 			frameStream <- frames
 		}
