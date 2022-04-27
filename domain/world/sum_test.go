@@ -3,6 +3,7 @@ package world
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"tjweldon/archetypal-agents/utils"
 )
 
 func getAdjacencyAssertion(t *testing.T, space MetricSpace1D) func(coordA, coordB float64) {
@@ -36,7 +37,7 @@ func TestCircles_Sum(t *testing.T) {
 func isCommutative(t *testing.T, space MetricSpace1D) {
 	assertAdjacent := getAdjacencyAssertion(t, space)
 	getSummands := func() (alpha float64, beta float64) {
-		alpha, beta = randFloat(-10, 10), randFloat(-10, 10)
+		alpha, beta = utils.RandFloat(-10, 10), utils.RandFloat(-10, 10)
 		return alpha, beta
 	}
 
@@ -53,7 +54,7 @@ func isAssociative(t *testing.T, space MetricSpace1D) {
 	assertAdjacent := getAdjacencyAssertion(t, space)
 	getSummands := func() (summands []float64) {
 		summands = []float64{
-			randFloat(-10, 10), randFloat(-10, 10), randFloat(-10, 10),
+			utils.RandFloat(-10, 10), utils.RandFloat(-10, 10), utils.RandFloat(-10, 10),
 		}
 		return summands
 	}
@@ -81,7 +82,7 @@ func hasZeroElement(t *testing.T, space MetricSpace1D) {
 	var zero, a float64
 
 	for range [100]any{} {
-		a = randFloat(-10, 10)
+		a = utils.RandFloat(-10, 10)
 
 		assertAdjacent(space.Sum(zero, a), a)
 	}
@@ -93,7 +94,7 @@ func inverseExists(t *testing.T, space MetricSpace1D) {
 	var a float64
 
 	for range [100]any{} {
-		a = randFloat(-10, 10)
+		a = utils.RandFloat(-10, 10)
 
 		assertAdjacent(space.Sum(space.Invert(a), a), 0.0)
 	}

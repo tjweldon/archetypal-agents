@@ -2,33 +2,51 @@ package agents
 
 import (
 	"fmt"
+	"math"
 	"time"
 	"tjweldon/archetypal-agents/domain/world"
+	"tjweldon/archetypal-agents/utils"
 )
 
 var (
-	width  float64 = 800
-	height float64 = 400
+	width    float64 = 800
+	height   float64 = 400
+	maxSpeed float64 = 10.0
 )
 
+// Agent represents an atomic interacting component of the simulation
 type Agent struct {
 	Position, Velocity *world.Vector
 }
 
-func NewAgent(positions, velocities *world.MetricSpace2D) *Agent {
-	return &Agent{positions.ZeroVector(), velocities.ZeroVector()}
+// NewAgent initialises an agent that starts at the top left
+func NewAgent(positions, velocities *world.MetricSpace2D, randomise bool) *Agent {
+	var position, velocity *world.Vector
+	if !randomise {
+		position = positions.ZeroVector()
+		velocity = velocities.ZeroVector()
+	} else {
+		position = positions.NewVector(utils.RandFloat(0, width), utils.RandFloat(0, height))
+
+		// Use plane polar for initial randomisation since that's easier when a max magnitude is imposed
+		r, theta := utils.RandFloat(0, maxSpeed), utils.RandFloat(0, 2*math.Pi)
+		velocity = velocities.NewVector(r*math.Cos(theta), r*math.Sin(theta))
+	}
+	return &Agent{position, velocity}
 }
 
-// State represents a static snapshot of the simulation at a given time
+// State represents a static (and informationally complete) snapshot of the simulation at a given time
 type State struct {
 	CoordinateSystem *world.MetricSpace2D
 	Agents           []*Agent
 }
 
+// NewState initialises a new State struct with the position and velocity vector spaces expressed as
+// a pair of world.MetricSpace2D
 func NewState(positions, velocities *world.MetricSpace2D) *State {
 	agents := make([]*Agent, 100)
-	for index, _ := range agents {
-		agents[index] = NewAgent(positions, velocities)
+	for index := range agents {
+		agents[index] = NewAgent(positions, velocities, true)
 	}
 	return &State{Agents: agents, CoordinateSystem: positions}
 }
@@ -37,7 +55,7 @@ func NewState(positions, velocities *world.MetricSpace2D) *State {
 // distances[i][j] == distances[j][i] and distances[i][i] == 0
 func (s State) Distances() (distances [][]float64) {
 	distances = make([][]float64, s.Population())
-	for index, _ := range distances {
+	for index := range distances {
 		distances[index] = make([]float64, s.Population())
 	}
 
@@ -64,6 +82,7 @@ type Scenario struct {
 	state                 *State
 }
 
+// InitialiseScenario sets up the simulation scenario.
 func InitialiseScenario(timeStep time.Duration) Scenario {
 	toroid, euclideanPlane := world.NewEuclideanToroid(width, height), world.NewEuclideanPlane()
 	state := NewState(toroid, euclideanPlane)
@@ -83,11 +102,13 @@ func (l LPFloat) MarshalJSON() ([]byte, error) {
 	return []byte(s), nil
 }
 
+// Coords are a part of the socket API, probably shouldn't be defined here
 type Coords struct {
 	X LPFloat `json:"x"`
 	Y LPFloat `json:"y"`
 }
 
+// Frame (see comment on Coords)
 type Frame []Coords
 
 // GetFrameAt Retrieves the frame data at time t (in seconds)

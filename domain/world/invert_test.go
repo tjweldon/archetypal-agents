@@ -1,6 +1,9 @@
 package world
 
-import "testing"
+import (
+	"testing"
+	"tjweldon/archetypal-agents/utils"
+)
 
 func TestLine_Invert(t *testing.T) {
 	space := RealLine()
@@ -23,7 +26,7 @@ func inverseTwiceIsIdentity(t *testing.T, space MetricSpace1D) {
 
 	var a float64
 	for range [100]any{} {
-		a = randFloat(-10, 10)
+		a = utils.RandFloat(-10, 10)
 		assertAdjacent(a, space.Invert(space.Invert(a)))
 	}
 }

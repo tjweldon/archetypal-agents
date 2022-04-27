@@ -3,6 +3,7 @@ package world
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"tjweldon/archetypal-agents/utils"
 )
 
 func TestVector_Accumulate_IsLinear_EuclideanPlane(t *testing.T) {
@@ -11,7 +12,7 @@ func TestVector_Accumulate_IsLinear_EuclideanPlane(t *testing.T) {
 	// basis vectors
 	plane := NewEuclideanPlane()
 	basis := [2]*Vector{plane.NewVector(1, 0), plane.NewVector(0, 1)}
-	x := randInt(1, 9)
+	x := utils.RandInt(1, 9)
 	y := 10 - x
 
 	terms := generateTerms(x, basis)
@@ -32,7 +33,7 @@ func TestVector_Accumulate_IsLinear_Toroid(t *testing.T) {
 	plane := NewEuclideanToroid(5, 2)
 	basis := [2]*Vector{plane.NewVector(1, 0), plane.NewVector(0, 1)}
 
-	x := randInt(1, 9)
+	x := utils.RandInt(1, 9)
 	y := 10 - x
 
 	terms := generateTerms(x, basis)
