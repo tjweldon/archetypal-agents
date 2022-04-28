@@ -74,6 +74,13 @@ func Circles(circumference float64) MetricSpace1D {
 	}
 }
 
+// VectorSpace as an interface roughly corresponds to the mathematical notion in the sense
+// that the Vector objects it returns are well behaved
+type VectorSpace interface {
+	ZeroVector() *Vector
+	NewVector(x, y float64) *Vector
+}
+
 // MetricSpace2D is a cartesian product of two MetricSpace1D
 type MetricSpace2D struct {
 	XCoord, YCoord MetricSpace1D
