@@ -7,7 +7,7 @@ import "tjweldon/archetypal-agents/domain/world"
 type Field int
 
 const (
-	CollisionAvoidance Field = iota
+	Separation Field = iota
 	Cohesion
 	Alignment
 	fieldCount
@@ -59,11 +59,11 @@ func (c Charges) Apply(mapping Transform) Charges {
 
 // Add as a bare function is the transform that adds c to whichever Charges Apply it:
 //	a, b := Alignment.BasisCharges(1), Cohesion.BasisCharges(1)
-// 	a: Charges{CollisionAvoidance: 0, Alignment: 1, Cohesion: 0}
-// 	b: Charges{CollisionAvoidance: 0, Alignment: 0, Cohesion: 1}
+// 	a: Charges{Separation: 0, Alignment: 1, Cohesion: 0}
+// 	b: Charges{Separation: 0, Alignment: 0, Cohesion: 1}
 //
 // 	c := b.Apply(a.Add())
-// 	c: Charges{CollisionAvoidance: 0, Alignment: 1, Cohesion: 1}
+// 	c: Charges{Separation: 0, Alignment: 1, Cohesion: 1}
 //
 func (c Charges) Add() Transform {
 	return func(field Field, f Charge) Charge {
@@ -73,25 +73,23 @@ func (c Charges) Add() Transform {
 
 // Action is the signature of a function that represents the way a Force acts to contribute to
 // the acceleration of a body
-type Action func(acc *world.Vector, displacement *world.Vector, q Charge)
+type Action func(acc *world.Vector, n *Neighbourhood, source Charge)
 
 // actionMap is the type alias of a registry of Action functions indexed by the relevant field
 type actionMap map[Field]Action
 
 // noAction is the zero value of the Action function type
-func noAction(_, _ *world.Vector, _ Charge) {}
-
-// Init initialises all actionMap as noAction
-func (a actionMap) Init() actionMap {
-	for field := range [fieldCount]any{} {
-		a[Field(field)] = noAction
-	}
-
-	return a
-}
+func noAction(_ *world.Vector, _ *Neighbourhood, _ Charge) {}
 
 // Actions are the actual mapping of a Field to an Action that is used to resolve the motion
-var Actions = (actionMap{}).Init()
+var Actions = actionMap{
+	Separation: func(acc *world.Vector, n *Neighbourhood, q Charge) {
+		n.Displacements()
+		acc.Accumulate()
+	},
+	Alignment: noAction,
+	Cohesion:  noAction,
+}
 
 // Force is wrapper that provides a way to actually accumulate the action of forces
 type Force struct {
@@ -100,9 +98,16 @@ type Force struct {
 	action Action
 }
 
-// Add applies the receiver Force to the acc world.Vector supplied based on the displacement and charge
-func (force Force) Add(acc *world.Vector, displacement *world.Vector, q Charge) {
-	force.action(acc, displacement, force.source*q)
+func (f Force) Init(source Charges, field Field) Force {
+	f.source = source[field]
+	f.field = field
+	f.action = Actions[field]
+	return f
+}
+
+// Apply applies the receiver Force to the acc world.Vector supplied based on the displacement and charge
+func (f Force) Apply(acc *world.Vector, neighbourhood *Neighbourhood, sensetivity Charge) {
+	f.action(acc, neighbourhood, f.source*sensetivity)
 }
 
 // Forces can be thought of as the action of a set of source Charges on another subject body with its own charges
@@ -113,7 +118,7 @@ func (f Forces) Init(source Charges) (forces Forces) {
 	var field Field
 	for fIndex := range [fieldCount]any{} {
 		field = Field(fIndex)
-		f[field] = Force{source[field], field, Actions[field]}
+		f[field] = (Force{}).Init(source, field)
 	}
 
 	return f
@@ -121,8 +126,8 @@ func (f Forces) Init(source Charges) (forces Forces) {
 
 // Act is similar to the method of the same name on the Force struct, however it accumulates the action
 // of all the forces, scaled by their respective Charges.
-func (f Forces) Act(acc *world.Vector, subject Charges, displacement *world.Vector) {
+func (f Forces) Act(acc *world.Vector, sensitivity Charges, neighbourhood *Neighbourhood) {
 	for field, force := range f {
-		force.Add(acc, displacement, subject[field])
+		force.Apply(acc, neighbourhood, sensitivity[field])
 	}
 }

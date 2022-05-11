@@ -151,6 +151,11 @@ func (v *Vector) Accumulate(vectors ...*Vector) *Vector {
 	return v
 }
 
+func (v *Vector) AccumXY(x, y float64) *Vector {
+	v.X, v.Y = v.metricSpace.XCoord.Sum(x), v.metricSpace.YCoord.Sum(y)
+	return v
+}
+
 // Times is an **immutable** scalar multiple of the vector instance where the semantics are:
 // u = v.Times(x) => u != v
 func (v *Vector) Times(scalar float64) Vector {
